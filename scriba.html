@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scriba</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,300;0,7..72,400;0,7..72,500;1,7..72,300;1,7..72,400&family=JetBrains+Mono:wght@400&display=swap');
+
+  :root {
+    --bg: #faf8f5; --fg: #2c2825; --ghost: #9a918a; --accent: #6b5c4d; --border: #e0dbd6; --editor-max: 720px; --radius: 4px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--fg); font-family: 'Literata', Georgia, serif; min-height: 100vh; display: flex; flex-direction: column; }
+
+  header { display: flex; align-items: center; justify-content: space-between; padding: 12px 24px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  header .brand { font-size: 15px; font-weight: 500; letter-spacing: 0.04em; color: var(--accent); text-transform: uppercase; }
+  header .controls { display: flex; gap: 8px; align-items: center; }
+  header button { background: none; border: 1px solid var(--border); color: var(--accent); font-family: 'Literata', Georgia, serif; font-size: 13px; padding: 5px 14px; border-radius: var(--radius); cursor: pointer; transition: all 0.15s; }
+  header button:hover, header button.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #c0392b; transition: background 0.3s; margin-right: 4px; }
+  .status-dot.connected { background: #27ae60; }
+  .status-label { font-size: 11px; color: var(--ghost); font-family: 'JetBrains Mono', monospace; }
+  .status-group { display: flex; align-items: center; gap: 6px; margin-right: 12px; }
+  .thinking-badge { font-size: 10px; font-family: 'JetBrains Mono', monospace; color: var(--bg); background: var(--accent); padding: 1px 6px; border-radius: 3px; letter-spacing: 0.03em; text-transform: uppercase; }
+
+  .editor-wrap { flex: 1; display: flex; justify-content: center; overflow-y: auto; padding: 48px 24px 120px; }
+  .editor-container { width: 100%; max-width: var(--editor-max); position: relative; }
+
+  #editor { width: 100%; min-height: 60vh; border: none; outline: none; background: none; font-family: 'JetBrains Mono', monospace; font-size: 15px; line-height: 1.75; color: var(--fg); resize: none; overflow: hidden; tab-size: 4; }
+  #editor::placeholder { color: var(--ghost); font-weight: 300; }
+
+  #ghost-layer { position: absolute; pointer-events: none; font-family: 'JetBrains Mono', monospace; font-size: 15px; line-height: 1.75; color: transparent; white-space: pre-wrap; word-wrap: break-word; overflow: hidden; top: 0; left: 0; width: 100%; tab-size: 4; }
+  #ghost-layer .real-text { color: transparent; }
+  #ghost-layer .ghost-text { color: var(--ghost); font-style: italic; }
+
+  #preview { display: none; font-family: 'Literata', Georgia, serif; font-size: 17px; line-height: 1.75; color: var(--fg); }
+  #preview h1 { font-size: 1.8em; font-weight: 500; margin: 0.6em 0 0.3em; }
+  #preview h2 { font-size: 1.4em; font-weight: 500; margin: 0.5em 0 0.25em; }
+  #preview h3 { font-size: 1.15em; font-weight: 500; margin: 0.4em 0 0.2em; }
+  #preview p { margin: 0 0 0.6em; }
+  #preview strong { font-weight: 500; }
+  #preview ul, #preview ol { margin: 0 0 0.6em 1.5em; }
+  #preview li { margin-bottom: 0.2em; }
+  #preview code { font-family: 'JetBrains Mono', monospace; font-size: 0.88em; background: var(--border); padding: 1px 5px; border-radius: 3px; }
+  #preview pre { background: var(--border); padding: 12px 16px; border-radius: 4px; overflow-x: auto; margin: 0 0 0.6em; }
+  #preview pre code { background: none; padding: 0; }
+  #preview blockquote { border-left: 3px solid var(--accent); padding-left: 16px; margin: 0 0 0.6em; color: var(--ghost); }
+  #preview hr { border: none; border-top: 1px solid var(--border); margin: 1em 0; }
+  .math-block { background: none; padding: 1em 0; display: flex; justify-content: center; margin: 1em 0; }
+
+  /* ── Context popup on selection ── */
+  .ctx-popup {
+    display: none;
+    position: absolute;
+    z-index: 50;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(44,40,37,0.12);
+    padding: 4px;
+    gap: 2px;
+    flex-direction: row;
+  }
+  .ctx-popup.visible { display: flex; }
+  .ctx-popup button {
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    padding: 5px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.12s;
+  }
+  .ctx-popup button:hover { background: var(--border); }
+  .ctx-popup button:disabled { opacity: 0.4; cursor: default; }
+  .ctx-popup .sep { width: 1px; background: var(--border); margin: 4px 0; }
+
+  /* ── Diff overlay ── */
+  .diff-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(44,40,37,0.25);
+    z-index: 90;
+    justify-content: center;
+    align-items: center;
+  }
+  .diff-overlay.open { display: flex; }
+  .diff-panel {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px 28px;
+    width: 560px;
+    max-width: 92vw;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+  .diff-panel h3 {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--accent);
+    margin-bottom: 16px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .diff-block {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    line-height: 1.7;
+    margin-bottom: 20px;
+    padding: 12px 16px;
+    border-radius: 4px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+  .diff-block.old-text {
+    background: #fce8e6;
+    border-left: 3px solid #c0392b;
+    text-decoration: line-through;
+    color: #8b3a2f;
+  }
+  .diff-block.new-text {
+    background: #e6f4ea;
+    border-left: 3px solid #27ae60;
+    color: #1e6f3e;
+  }
+  .diff-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+  .diff-actions button {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--accent);
+    font-family: 'Literata', Georgia, serif;
+    font-size: 13px;
+    padding: 5px 16px;
+    border-radius: var(--radius);
+    cursor: pointer;
+  }
+  .diff-actions button.accept {
+    background: #27ae60;
+    color: white;
+    border-color: #27ae60;
+  }
+  .diff-actions button.accept:hover { background: #219a52; }
+
+  .hint-bar { position: fixed; bottom: 0; left: 0; right: 0; padding: 8px 24px; background: var(--bg); border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+  .hint-bar .hints { font-size: 12px; color: var(--ghost); font-family: 'JetBrains Mono', monospace; }
+  .hint-bar .hints kbd { background: var(--border); padding: 1px 6px; border-radius: 3px; font-size: 11px; margin: 0 2px; }
+  .word-count { font-size: 12px; color: var(--ghost); font-family: 'JetBrains Mono', monospace; }
+
+  .thinking { display: inline-block; width: 12px; height: 12px; border: 1.5px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.6s linear infinite; margin-left: 8px; vertical-align: middle; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .settings-overlay { display: none; position: fixed; inset: 0; background: rgba(44,40,37,0.3); z-index: 100; justify-content: center; align-items: center; }
+  .settings-overlay.open { display: flex; }
+  .settings-panel { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 28px 32px; width: 420px; max-width: 90vw; max-height: 90vh; overflow-y: auto; }
+  .settings-panel h2 { font-size: 16px; font-weight: 500; margin-bottom: 20px; color: var(--accent); }
+  .settings-panel label { display: block; font-size: 13px; color: var(--fg); margin-bottom: 4px; }
+  .settings-panel input, .settings-panel select, .settings-panel textarea { width: 100%; padding: 7px 10px; border: 1px solid var(--border); border-radius: var(--radius); font-family: 'JetBrains Mono', monospace; font-size: 13px; background: #fff; color: var(--fg); margin-bottom: 14px; outline: none; }
+  .settings-panel textarea { min-height: 60px; resize: vertical; font-family: 'Literata', Georgia, serif; }
+  .settings-panel input:focus, .settings-panel textarea:focus { border-color: var(--accent); }
+  .settings-panel .row { display: flex; gap: 12px; }
+  .settings-panel .row > div { flex: 1; }
+  .settings-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+  .settings-actions button { background: none; border: 1px solid var(--border); color: var(--accent); font-family: 'Literata', Georgia, serif; font-size: 13px; padding: 5px 16px; border-radius: var(--radius); cursor: pointer; }
+  .settings-actions button.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+  .toggle-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; gap: 16px; }
+  .toggle-label { display: flex; flex-direction: column; font-size: 13px; color: var(--fg); flex: 1; }
+  .toggle-hint { font-size: 11px; color: var(--ghost); margin-top: 3px; line-height: 1.4; }
+  .switch { position: relative; width: 40px; min-width: 40px; height: 22px; margin-top: 1px; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider { position: absolute; cursor: pointer; inset: 0; background: var(--border); border-radius: 22px; transition: background 0.2s; }
+  .slider::before { content: ''; position: absolute; width: 16px; height: 16px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: transform 0.2s; }
+  .switch input:checked + .slider { background: var(--accent); }
+  .switch input:checked + .slider::before { transform: translateX(18px); }
+  .thinking-budget-row { margin-bottom: 14px; }
+  .thinking-budget-row label { display: block; font-size: 13px; color: var(--fg); margin-bottom: 4px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">Scriba</div>
+  <div class="controls">
+    <div class="status-group">
+      <div class="status-dot" id="statusDot"></div>
+      <span class="status-label" id="statusLabel">disconnesso</span>
+      <span class="thinking-badge" id="thinkingBadge" style="display:none;">think</span>
+      <span id="thinkingIndicator"></span>
+    </div>
+    <button id="previewBtn" onclick="togglePreview()">Anteprima</button>
+    <button onclick="openSettings()">Impostazioni</button>
+    <button onclick="loadMd()">Carica .md</button>
+    <button onclick="saveMd()">Salva .md</button>
+    <button onclick="exportDocx()">Esporta .docx</button>
+  </div>
+</header>
+<div class="editor-wrap">
+  <div class="editor-container">
+    <div style="position: relative;" id="editorArea">
+      <div id="ghost-layer" aria-hidden="true"></div>
+      <textarea id="editor" placeholder="# Titolo del documento&#10;&#10;Inizia a scrivere in Markdown..." spellcheck="true"></textarea>
+    </div>
+    <div id="preview"></div>
+    <div class="ctx-popup" id="ctxPopup">
+      <button onclick="ctxAction('rephrase')">Rifrasa</button>
+      <div class="sep"></div>
+      <button onclick="ctxAction('correct')">Correggi</button>
+    </div>
+  </div>
+</div>
+<div class="diff-overlay" id="diffOverlay">
+  <div class="diff-panel">
+    <h3 id="diffTitle">Rifrasa</h3>
+    <div class="diff-block old-text" id="diffOld"></div>
+    <div class="diff-block new-text" id="diffNew"></div>
+    <div class="diff-actions">
+      <button onclick="diffReject()">Annulla</button>
+      <button class="accept" onclick="diffAccept()">Accetta</button>
+    </div>
+  </div>
+</div>
+<div class="hint-bar">
+  <div class="hints"><kbd>Tab</kbd> accetta &nbsp;<kbd>Esc</kbd> rifiuta &nbsp;<kbd>Ctrl</kbd>+<kbd>Spazio</kbd> suggerisci &nbsp;<kbd>Ctrl</kbd>+<kbd>P</kbd> anteprima</div>
+  <div class="word-count" id="wordCount">0 parole</div>
+</div>
+<input type="file" id="fileInput" accept=".md,.markdown,text/markdown" style="display:none;" />
+<div class="settings-overlay" id="settingsOverlay">
+  <div class="settings-panel" onclick="event.stopPropagation()">
+    <h2>Impostazioni</h2>
+    <label>Indirizzo server LM Studio</label>
+    <input type="text" id="settingUrl" value="http://localhost:1234" />
+    <label>Prompt di sistema</label>
+    <textarea id="settingSystemPrompt">Sei un assistente di scrittura. Completa il testo fornito dall'utente in modo naturale e coerente. Il testo usa la sintassi Markdown: rispetta e continua lo stile Markdown se presente. Rispondi SOLO con la continuazione del testo, senza ripetere quello che c'è già. Scrivi nella stessa lingua del testo. Produci al massimo 1-2 frasi.</textarea>
+    <div class="row"><div><label>Temperatura</label><input type="number" id="settingTemp" value="0.7" step="0.1" min="0" max="2" /></div><div><label>Max token</label><input type="number" id="settingMaxTokens" value="80" step="10" min="10" max="500" /></div></div>
+    <div class="row"><div><label>Ritardo (ms)</label><input type="number" id="settingDelay" value="1500" step="100" min="500" max="5000" /></div><div><label>Contesto (caratteri)</label><input type="number" id="settingContext" value="1500" step="100" min="200" max="5000" /></div></div>
+    <div class="toggle-row">
+      <label class="toggle-label" for="settingThinking"><span>Thinking (ragionamento esteso)</span><span class="toggle-hint">Per modelli con thinking (QwQ, DeepSeek-R1, Qwen3).</span></label>
+      <label class="switch"><input type="checkbox" id="settingThinking" /><span class="slider"></span></label>
+    </div>
+    <div id="thinkingBudgetRow" class="thinking-budget-row" style="display:none;"><label>Thinking budget (token)</label><input type="number" id="settingThinkingBudget" value="1024" step="128" min="128" max="8192" /></div>
+    <div class="settings-actions"><button onclick="closeSettings()">Annulla</button><button class="primary" onclick="saveSettings()">Salva</button></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/15.0.7/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script>
+let config={url:'http://localhost:1234',systemPrompt:'',temperature:0.7,maxTokens:80,delay:1500,contextChars:1500,thinking:false,thinkingBudget:1024};
+let ghostText='',debounceTimer=null,abortController=null,isConnected=false,previewMode=false;
+const editor=document.getElementById('editor'),ghostLayer=document.getElementById('ghost-layer'),editorArea=document.getElementById('editorArea'),preview=document.getElementById('preview'),previewBtn=document.getElementById('previewBtn'),statusDot=document.getElementById('statusDot'),statusLabel=document.getElementById('statusLabel'),thinkingIndicator=document.getElementById('thinkingIndicator'),wordCountEl=document.getElementById('wordCount');
+
+function init(){loadSettings();checkConnection();setInterval(checkConnection,15000);editor.addEventListener('input',onInput);editor.addEventListener('keydown',onKeyDown);editor.addEventListener('scroll',syncGhostScroll);window.addEventListener('resize',autoResize);document.addEventListener('keydown',function(e){if(e.ctrlKey&&e.key==='p'){e.preventDefault();togglePreview();}});autoResize();}
+
+function loadSettings(){const saved=localStorage.getItem('scriba-config');if(saved){try{Object.assign(config,JSON.parse(saved));}catch(e){}}document.getElementById('settingUrl').value=config.url;document.getElementById('settingSystemPrompt').value=config.systemPrompt||document.getElementById('settingSystemPrompt').value;document.getElementById('settingTemp').value=config.temperature;document.getElementById('settingMaxTokens').value=config.maxTokens;document.getElementById('settingDelay').value=config.delay;document.getElementById('settingContext').value=config.contextChars;document.getElementById('settingThinking').checked=config.thinking;document.getElementById('settingThinkingBudget').value=config.thinkingBudget;updateThinkingBudgetVisibility();config.systemPrompt=document.getElementById('settingSystemPrompt').value;document.getElementById('thinkingBadge').style.display=config.thinking?'inline':'none';document.getElementById('settingThinking').addEventListener('change',updateThinkingBudgetVisibility);}
+function updateThinkingBudgetVisibility(){document.getElementById('thinkingBudgetRow').style.display=document.getElementById('settingThinking').checked?'block':'none';}
+function saveSettings(){config.url=document.getElementById('settingUrl').value.replace(/\/+$/,'');config.systemPrompt=document.getElementById('settingSystemPrompt').value;config.temperature=parseFloat(document.getElementById('settingTemp').value);config.maxTokens=parseInt(document.getElementById('settingMaxTokens').value);config.delay=parseInt(document.getElementById('settingDelay').value);config.contextChars=parseInt(document.getElementById('settingContext').value);config.thinking=document.getElementById('settingThinking').checked;config.thinkingBudget=parseInt(document.getElementById('settingThinkingBudget').value);localStorage.setItem('scriba-config',JSON.stringify(config));document.getElementById('thinkingBadge').style.display=config.thinking?'inline':'none';closeSettings();checkConnection();}
+function openSettings(){document.getElementById('settingsOverlay').classList.add('open');}
+function closeSettings(){document.getElementById('settingsOverlay').classList.remove('open');}
+
+function togglePreview(){previewMode=!previewMode;if(previewMode){let text=editor.value;const mathStore=[];text=text.replace(/\$\$([\s\S]+?)\$\$/g,(match,math)=>{const id=mathStore.length;mathStore.push({type:'block',content:math.trim()});return '\n\n<!--MATHBLOCK'+id+'-->\n\n';});text=text.replace(/\$([^\$\n]+?)\$/g,(match,math)=>{const id=mathStore.length;mathStore.push({type:'inline',content:math});return '<!--MATHINLINE'+id+'-->';});let html=marked.parse(text);mathStore.forEach((item,idx)=>{const placeholder=item.type==='block'?'<!--MATHBLOCK'+idx+'-->':'<!--MATHINLINE'+idx+'-->';try{const rendered=katex.renderToString(item.content,{throwOnError:false,displayMode:item.type==='block'});const wrapped=item.type==='block'?'<div class="math-block">'+rendered+'</div>':rendered;html=html.split(placeholder).join(wrapped);}catch(e){console.error('KaTeX error:',e,item.content);}});preview.innerHTML=html;editorArea.style.display='none';preview.style.display='block';previewBtn.classList.add('active');}else{editorArea.style.display='block';preview.style.display='none';previewBtn.classList.remove('active');editor.focus();autoResize();}}
+
+async function checkConnection(){try{const r=await fetch(config.url+'/v1/models',{signal:AbortSignal.timeout(3000)});if(r.ok){isConnected=true;statusDot.classList.add('connected');const data=await r.json();statusLabel.textContent=data?.data?.[0]?.id||'connesso';}else{throw new Error();}}catch{isConnected=false;statusDot.classList.remove('connected');statusLabel.textContent='disconnesso';}}
+
+function onInput(){autoResize();updateWordCount();clearGhost();cancelPending();const text=editor.value;if(!text.trim()||!isConnected)return;const endsWithPunctOrSpace=/[.!?,;:\s\n]$/.test(text.slice(-3));debounceTimer=setTimeout(()=>{requestCompletion();},endsWithPunctOrSpace?config.delay:config.delay*1.5);}
+function onKeyDown(e){if(e.key==='Tab'&&ghostText){e.preventDefault();acceptGhost();return;}if(e.key==='Escape'&&ghostText){e.preventDefault();clearGhost();cancelPending();return;}if((e.key===' '||e.code==='Space')&&e.ctrlKey){e.preventDefault();cancelPending();requestCompletion();return;}}
+function autoResize(){editor.style.height='auto';editor.style.height=editor.scrollHeight+'px';}
+function updateWordCount(){const text=editor.value.trim();const count=text?text.split(/\s+/).length:0;wordCountEl.textContent=count+' parol'+(count===1?'a':'e');}
+
+function showGhost(suggestion){ghostText=suggestion;ghostLayer.innerHTML='<span class="real-text">'+escapeHtml(editor.value)+'</span><span class="ghost-text">'+escapeHtml(suggestion)+'</span>';syncGhostPosition();}
+function clearGhost(){ghostText='';ghostLayer.innerHTML='';}
+function acceptGhost(){if(!ghostText)return;editor.value+=ghostText;editor.selectionStart=editor.selectionEnd=editor.value.length;clearGhost();autoResize();updateWordCount();}
+function syncGhostPosition(){const s=getComputedStyle(editor);ghostLayer.style.padding=s.padding;ghostLayer.style.width=s.width;ghostLayer.style.top=editor.offsetTop+'px';ghostLayer.style.left=editor.offsetLeft+'px';}
+function syncGhostScroll(){ghostLayer.scrollTop=editor.scrollTop;}
+
+async function requestCompletion(){if(!isConnected)return;const fullText=editor.value;if(!fullText.trim())return;const context=fullText.slice(-config.contextChars);cancelPending();abortController=new AbortController();thinkingIndicator.innerHTML='<span class="thinking"></span>';try{const body={model:'local-model',max_tokens:config.thinking?config.maxTokens+config.thinkingBudget:config.maxTokens,temperature:config.temperature,stop:['\n\n\n'],messages:[{role:'system',content:config.systemPrompt+(config.thinking?'':'\n\nNon usare tag <think> né processi di ragionamento visibili. Rispondi direttamente con il testo.')},{role:'user',content:'Continua questo testo Markdown (rispondi SOLO con la continuazione, nient\'altro):\n\n'+context}]};const response=await fetch(config.url+'/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json'},signal:abortController.signal,body:JSON.stringify(body)});if(!response.ok){const errText=await response.text();console.error('LLM request failed:',response.status,errText);throw new Error('HTTP '+response.status);}const data=await response.json();const suggestion=data?.choices?.[0]?.message?.content;if(suggestion&&suggestion.trim()){if(editor.value===fullText){const stripped=stripThinkTags(suggestion);const cleaned=cleanSuggestion(fullText,stripped);if(cleaned.trim())showGhost(cleaned);}}}catch(e){if(e.name!=='AbortError')console.error('LLM error:',e);}finally{thinkingIndicator.innerHTML='';}}
+function cancelPending(){if(debounceTimer){clearTimeout(debounceTimer);debounceTimer=null;}if(abortController){abortController.abort();abortController=null;}thinkingIndicator.innerHTML='';}
+function stripThinkTags(t){return t.replace(/<think>[\s\S]*?<\/think>/gi,'').replace(/<think>[\s\S]*/gi,'').trim();}
+function cleanSuggestion(existing,suggestion){let s=suggestion;const tail=existing.slice(-100);for(let len=Math.min(tail.length,s.length);len>5;len--){if(s.substring(0,len)===tail.slice(-len)){s=s.substring(len);break;}}if(existing.length>0&&!/\s$/.test(existing)&&/^[a-zA-ZÀ-ÿ]/.test(s))s=' '+s;return s;}
+
+// ═══════ Markdown → OOXML docx ═══════
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+function inlineToRuns(text){let runs='';const rx=/(\*\*\*(.+?)\*\*\*|\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`|([^*`]+))/g;let m;while((m=rx.exec(text))!==null){if(m[2])runs+='<w:r><w:rPr><w:b/><w:i/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t xml:space="preserve">'+esc(m[2])+'</w:t></w:r>';else if(m[3])runs+='<w:r><w:rPr><w:b/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t xml:space="preserve">'+esc(m[3])+'</w:t></w:r>';else if(m[4])runs+='<w:r><w:rPr><w:i/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t xml:space="preserve">'+esc(m[4])+'</w:t></w:r>';else if(m[5])runs+='<w:r><w:rPr><w:rFonts w:ascii="Courier New" w:hAnsi="Courier New"/><w:sz w:val="22"/><w:szCs w:val="22"/><w:shd w:val="clear" w:fill="E8E5E1"/></w:rPr><w:t xml:space="preserve">'+esc(m[5])+'</w:t></w:r>';else if(m[6])runs+='<w:r><w:rPr><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t xml:space="preserve">'+esc(m[6])+'</w:t></w:r>';}return runs||'<w:r><w:rPr><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t xml:space="preserve">'+esc(text)+'</w:t></w:r>';}
+
+function markdownToDocxXml(md){const lines=md.split('\n');let xml='',inCode=false;
+for(let i=0;i<lines.length;i++){const line=lines[i];
+if(line.startsWith('```')){inCode=!inCode;continue;}
+if(inCode){xml+='<w:p><w:pPr><w:shd w:val="clear" w:fill="E8E5E1"/><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Courier New" w:hAnsi="Courier New"/><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr><w:t xml:space="preserve">'+esc(line)+'</w:t></w:r></w:p>';continue;}
+if(line.trim()===''){xml+='<w:p><w:pPr><w:spacing w:after="0"/></w:pPr></w:p>';continue;}
+const hm=line.match(/^(#{1,6})\s+(.+)$/);if(hm){const lv=hm[1].length,sz={1:40,2:34,3:28,4:26,5:24,6:24}[lv]||24;xml+='<w:p><w:pPr><w:pStyle w:val="Heading'+lv+'"/><w:spacing w:before="240" w:after="120"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="'+sz+'"/><w:szCs w:val="'+sz+'"/></w:rPr><w:t>'+esc(hm[2])+'</w:t></w:r></w:p>';continue;}
+if(/^(---|\*\*\*|___)/.test(line.trim())){xml+='<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="4" w:space="1" w:color="auto"/></w:pBdr><w:spacing w:after="120"/></w:pPr></w:p>';continue;}
+if(line.startsWith('> ')){xml+='<w:p><w:pPr><w:pBdr><w:left w:val="single" w:sz="12" w:space="8" w:color="6B5C4D"/></w:pBdr><w:ind w:left="360"/><w:spacing w:after="80"/></w:pPr>'+inlineToRuns(line.replace(/^>\s*/,''))+'</w:p>';continue;}
+const ul=line.match(/^(\s*)[-*+]\s+(.+)$/);if(ul){const ind=720+Math.floor((ul[1]||'').length/2)*360;xml+='<w:p><w:pPr><w:ind w:left="'+ind+'" w:hanging="360"/><w:spacing w:after="40"/></w:pPr><w:r><w:rPr><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t xml:space="preserve">\u2022  </w:t></w:r>'+inlineToRuns(ul[2])+'</w:p>';continue;}
+const ol=line.match(/^(\s*)(\d+)[.)]\s+(.+)$/);if(ol){const ind=720+Math.floor((ol[1]||'').length/2)*360;xml+='<w:p><w:pPr><w:ind w:left="'+ind+'" w:hanging="360"/><w:spacing w:after="40"/></w:pPr><w:r><w:rPr><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t xml:space="preserve">'+esc(ol[2])+'.  </w:t></w:r>'+inlineToRuns(ol[3])+'</w:p>';continue;}
+xml+='<w:p><w:pPr><w:spacing w:after="120" w:line="360" w:lineRule="auto"/></w:pPr>'+inlineToRuns(line)+'</w:p>';}
+return xml;}
+
+function loadMd(){const fileInput=document.getElementById('fileInput');fileInput.onchange=function(e){const file=e.target.files[0];if(!file)return;if(!file.name.match(/\.(md|markdown)$/i)){alert('Seleziona un file Markdown (.md)');return;}const reader=new FileReader();reader.onload=function(ev){editor.value=ev.target.result;autoResize();updateWordCount();clearGhost();cancelPending();};reader.readAsText(file,'UTF-8');fileInput.value='';};fileInput.click();}
+
+function saveMd(){const bodyText=editor.value;if(!bodyText.trim()){alert('Niente da salvare.');return;}
+const titleMatch=bodyText.match(/^#\s+(.+)$/m);const titleText=titleMatch?titleMatch[1].trim():'Documento';
+const fn=titleText.replace(/[^a-zA-Z0-9\u00C0-\u024F\s]/g,'').replace(/\s+/g,'_').substring(0,40);
+const blob=new Blob([bodyText],{type:'text/markdown;charset=utf-8'});
+saveAs(blob,fn+'.md');}
+
+async function exportDocx(){const bodyText=editor.value;if(!bodyText.trim()){alert('Niente da esportare.');return;}
+// Extract title from first # heading, fallback to 'Documento'
+const titleMatch=bodyText.match(/^#\s+(.+)$/m);const titleText=titleMatch?titleMatch[1].trim():'Documento';
+const bodyXml=markdownToDocxXml(bodyText);
+const docXml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" xmlns:mo="http://schemas.microsoft.com/office/mac/office/2008/main" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:mv="urn:schemas-microsoft-com:mac:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:w10="urn:schemas-microsoft-com:office:word" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:wne="http://schemas.microsoft.com/office/word/2006/wordml"><w:body>'+bodyXml+'<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr></w:body></w:document>';
+const ct='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>';
+const rels='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>';
+const wrels='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>';
+const zip=new JSZip();zip.file('[Content_Types].xml',ct);zip.file('_rels/.rels',rels);zip.file('word/document.xml',docXml);zip.file('word/_rels/document.xml.rels',wrels);
+const blob=await zip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+const fn=titleText.replace(/[^a-zA-Z0-9\u00C0-\u024F\s]/g,'').replace(/\s+/g,'_').substring(0,40);
+saveAs(blob,fn+'.docx');}
+
+// ═══════ Context popup (Rifrasa / Correggi) ═══════
+const ctxPopup=document.getElementById('ctxPopup');
+let selStart=0,selEnd=0,selText='',pendingReplacement='';
+
+function showCtxPopup(){
+  const s=editor.selectionStart,e=editor.selectionEnd;
+  if(s===e||previewMode){ctxPopup.classList.remove('visible');return;}
+  selStart=s;selEnd=e;selText=editor.value.substring(s,e);
+  // Position popup near selection
+  const mirror=document.createElement('div');
+  const cs=getComputedStyle(editor);
+  mirror.style.cssText='position:absolute;visibility:hidden;white-space:pre-wrap;word-wrap:break-word;overflow:hidden;'+
+    'font:'+cs.font+';padding:'+cs.padding+';width:'+cs.width+';tab-size:4;line-height:'+cs.lineHeight+';top:0;left:0;';
+  mirror.textContent=editor.value.substring(0,e);
+  const span=document.createElement('span');
+  span.textContent='|';
+  mirror.appendChild(span);
+  editorArea.appendChild(mirror);
+  const spanRect=span.getBoundingClientRect();
+  const editorRect=editor.getBoundingClientRect();
+  editorArea.removeChild(mirror);
+  const x=spanRect.left-editorRect.left;
+  const y=spanRect.top-editorRect.top+editor.scrollTop;
+  ctxPopup.style.left=Math.max(0,Math.min(x,editor.offsetWidth-160))+'px';
+  ctxPopup.style.top=Math.max(0,y-36)+'px';
+  ctxPopup.classList.add('visible');
+}
+
+function hideCtxPopup(){ctxPopup.classList.remove('visible');}
+
+editor.addEventListener('mouseup',()=>setTimeout(showCtxPopup,10));
+editor.addEventListener('keyup',(e)=>{if(e.shiftKey)setTimeout(showCtxPopup,10);else hideCtxPopup();});
+editor.addEventListener('input',hideCtxPopup);
+editor.addEventListener('blur',()=>setTimeout(hideCtxPopup,200));
+
+async function ctxAction(mode){
+  if(!selText.trim()||!isConnected)return;
+  hideCtxPopup();
+  cancelPending();
+  abortController=new AbortController();
+  thinkingIndicator.innerHTML='<span class="thinking"></span>';
+
+  const sysMsg=mode==='rephrase'
+    ? 'Riscrivi il testo fornito in modo diverso, mantenendo lo stesso significato e la stessa lingua. Se il testo usa sintassi Markdown, mantienila. Rispondi SOLO con il testo riscritto, nient\'altro.'
+    : 'Sei un correttore esperto. Correggi tutti gli errori ortografici, grammaticali, di punteggiatura, concordanza e sintassi nel testo fornito. Migliora la fluidità dove necessario, ma mantieni il significato e lo stile originale. Se il testo usa sintassi Markdown, mantienila. Rispondi SOLO con il testo corretto, senza spiegazioni.';
+
+  try{
+    const body={
+      model:'local-model',
+      max_tokens:Math.max(512,Math.ceil(selText.length*1.2)),
+      temperature:mode==='rephrase'?0.8:0.2,
+      messages:[
+        {role:'system',content:sysMsg+(config.thinking?'':'\n\nNon usare tag <think>. Rispondi direttamente.')},
+        {role:'user',content:selText}
+      ]
+    };
+
+    const response=await fetch(config.url+'/v1/chat/completions',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      signal:abortController.signal,body:JSON.stringify(body)
+    });
+    if(!response.ok){const errText=await response.text();console.error('LLM request failed:',response.status,errText);throw new Error('HTTP '+response.status);}
+    const data=await response.json();
+    let result=data?.choices?.[0]?.message?.content;
+    if(result){
+      result=stripThinkTags(result).trim();
+      if(result&&result!==selText.trim()){
+        pendingReplacement=result;
+        document.getElementById('diffTitle').textContent=mode==='rephrase'?'Rifrasa':'Correggi';
+        document.getElementById('diffOld').textContent=selText;
+        document.getElementById('diffNew').textContent=result;
+        document.getElementById('diffOverlay').classList.add('open');
+      }else if(result===selText.trim()&&mode==='correct'){
+        alert('Nessun errore trovato.');
+      }
+    }
+  }catch(e){
+    if(e.name!=='AbortError')console.error('LLM error:',e);
+  }finally{
+    thinkingIndicator.innerHTML='';
+  }
+}
+
+function diffAccept(){
+  if(!pendingReplacement)return;
+  const before=editor.value.substring(0,selStart);
+  const after=editor.value.substring(selEnd);
+  editor.value=before+pendingReplacement+after;
+  editor.selectionStart=selStart;
+  editor.selectionEnd=selStart+pendingReplacement.length;
+  pendingReplacement='';
+  document.getElementById('diffOverlay').classList.remove('open');
+  autoResize();updateWordCount();editor.focus();
+}
+
+function diffReject(){
+  pendingReplacement='';
+  document.getElementById('diffOverlay').classList.remove('open');
+  editor.focus();
+  editor.selectionStart=selStart;editor.selectionEnd=selEnd;
+}
+
+function escapeHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+init();
+</script>
+</body>
+</html>
