@@ -189,7 +189,7 @@
 </head>
 <body>
 <header>
-  <div class="brand">Scriba</div>
+  <div class="brand" id="brandLabel">Scriba</div>
   <div class="controls">
     <div class="status-group">
       <div class="status-dot" id="statusDot"></div>
@@ -198,10 +198,10 @@
       <span id="thinkingIndicator"></span>
     </div>
     <button id="previewBtn" onclick="togglePreview()">Anteprima</button>
-    <button onclick="openSettings()">Impostazioni</button>
-    <button onclick="loadMd()">Carica .md</button>
-    <button onclick="saveMd()">Salva .md</button>
-    <button onclick="exportDocx()">Esporta .docx</button>
+    <button id="settingsBtn" onclick="openSettings()">Impostazioni</button>
+    <button id="loadMdBtn" onclick="loadMd()">Carica .md</button>
+    <button id="saveMdBtn" onclick="saveMd()">Salva .md</button>
+    <button id="exportDocxBtn" onclick="exportDocx()">Esporta .docx</button>
   </div>
 </header>
 <div class="editor-wrap">
@@ -212,9 +212,9 @@
     </div>
     <div id="preview"></div>
     <div class="ctx-popup" id="ctxPopup">
-      <button onclick="ctxAction('rephrase')">Rifrasa</button>
+      <button id="rephraseBtn" onclick="ctxAction('rephrase')">Rifrasa</button>
       <div class="sep"></div>
-      <button onclick="ctxAction('correct')">Correggi</button>
+      <button id="correctBtn" onclick="ctxAction('correct')">Correggi</button>
     </div>
   </div>
 </div>
@@ -224,31 +224,36 @@
     <div class="diff-block old-text" id="diffOld"></div>
     <div class="diff-block new-text" id="diffNew"></div>
     <div class="diff-actions">
-      <button onclick="diffReject()">Annulla</button>
-      <button class="accept" onclick="diffAccept()">Accetta</button>
+      <button id="diffRejectBtn" onclick="diffReject()">Annulla</button>
+      <button class="accept" id="diffAcceptBtn" onclick="diffAccept()">Accetta</button>
     </div>
   </div>
 </div>
 <div class="hint-bar">
-  <div class="hints"><kbd>Tab</kbd> accetta &nbsp;<kbd>Esc</kbd> rifiuta &nbsp;<kbd>Ctrl</kbd>+<kbd>Spazio</kbd> suggerisci &nbsp;<kbd>Ctrl</kbd>+<kbd>P</kbd> anteprima</div>
+  <div class="hints" id="hintsLabel"><kbd>Tab</kbd> accetta &nbsp;<kbd>Esc</kbd> rifiuta &nbsp;<kbd>Ctrl</kbd>+<kbd>Spazio</kbd> suggerisci &nbsp;<kbd>Ctrl</kbd>+<kbd>P</kbd> anteprima</div>
   <div class="word-count" id="wordCount">0 parole</div>
 </div>
 <input type="file" id="fileInput" accept=".md,.markdown,text/markdown" style="display:none;" />
 <div class="settings-overlay" id="settingsOverlay">
   <div class="settings-panel" onclick="event.stopPropagation()">
-    <h2>Impostazioni</h2>
-    <label>Indirizzo server LM Studio</label>
+    <h2 id="settingsTitleLabel">Impostazioni</h2>
+    <label id="settingLangLabel">Lingua</label>
+    <select id="settingLang">
+      <option value="it">Italiano</option>
+      <option value="en">English</option>
+    </select>
+    <label id="settingServerLabel">Indirizzo server LM Studio</label>
     <input type="text" id="settingUrl" value="http://localhost:1234" />
-    <label>Prompt di sistema</label>
+    <label id="settingSystemPromptLabel">Prompt di sistema</label>
     <textarea id="settingSystemPrompt">Sei un assistente di scrittura. Completa il testo fornito dall'utente in modo naturale e coerente. Il testo usa la sintassi Markdown: rispetta e continua lo stile Markdown se presente. Rispondi SOLO con la continuazione del testo, senza ripetere quello che c'è già. Scrivi nella stessa lingua del testo. Produci al massimo 1-2 frasi.</textarea>
-    <div class="row"><div><label>Temperatura</label><input type="number" id="settingTemp" value="0.7" step="0.1" min="0" max="2" /></div><div><label>Max token</label><input type="number" id="settingMaxTokens" value="80" step="10" min="10" max="500" /></div></div>
-    <div class="row"><div><label>Ritardo (ms)</label><input type="number" id="settingDelay" value="1500" step="100" min="500" max="5000" /></div><div><label>Contesto (caratteri)</label><input type="number" id="settingContext" value="1500" step="100" min="200" max="5000" /></div></div>
+    <div class="row"><div><label id="settingTempLabel">Temperatura</label><input type="number" id="settingTemp" value="0.7" step="0.1" min="0" max="2" /></div><div><label id="settingMaxTokensLabel">Max token</label><input type="number" id="settingMaxTokens" value="80" step="10" min="10" max="500" /></div></div>
+    <div class="row"><div><label id="settingDelayLabel">Ritardo (ms)</label><input type="number" id="settingDelay" value="1500" step="100" min="500" max="5000" /></div><div><label id="settingContextLabel">Contesto (caratteri)</label><input type="number" id="settingContext" value="1500" step="100" min="200" max="5000" /></div></div>
     <div class="toggle-row">
-      <label class="toggle-label" for="settingThinking"><span>Thinking (ragionamento esteso)</span><span class="toggle-hint">Per modelli con thinking (QwQ, DeepSeek-R1, Qwen3).</span></label>
+      <label class="toggle-label" for="settingThinking"><span id="settingThinkingLabel">Thinking (ragionamento esteso)</span><span class="toggle-hint" id="settingThinkingHintLabel">Per modelli con thinking (QwQ, DeepSeek-R1, Qwen3).</span></label>
       <label class="switch"><input type="checkbox" id="settingThinking" /><span class="slider"></span></label>
     </div>
-    <div id="thinkingBudgetRow" class="thinking-budget-row" style="display:none;"><label>Thinking budget (token)</label><input type="number" id="settingThinkingBudget" value="1024" step="128" min="128" max="8192" /></div>
-    <div class="settings-actions"><button onclick="closeSettings()">Annulla</button><button class="primary" onclick="saveSettings()">Salva</button></div>
+    <div id="thinkingBudgetRow" class="thinking-budget-row" style="display:none;"><label id="settingThinkingBudgetLabel">Thinking budget (token)</label><input type="number" id="settingThinkingBudget" value="1024" step="128" min="128" max="8192" /></div>
+    <div class="settings-actions"><button id="settingCancelBtn" onclick="closeSettings()">Annulla</button><button class="primary" id="settingSaveBtn" onclick="saveSettings()">Salva</button></div>
   </div>
 </div>
 
@@ -257,26 +262,30 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/15.0.7/marked.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 <script>
-let config={url:'http://localhost:1234',systemPrompt:'',temperature:0.7,maxTokens:80,delay:1500,contextChars:1500,thinking:false,thinkingBudget:1024};
+const i18n={it:{brand:'Scriba',preview:'Anteprima',settings:'Impostazioni',loadMd:'Carica .md',saveMd:'Salva .md',exportDocx:'Esporta .docx',hintTab:'accetta',hintEsc:'rifiuta',hintCtrlSpace:'suggerisci',hintCtrlP:'anteprima',wordSingular:'parola',wordPlural:'parole',disconnected:'disconnesso',connected:'connesso',thinkBadge:'think',settingsTitle:'Impostazioni',settingServer:'Indirizzo server LM Studio',settingSystemPrompt:'Prompt di sistema',settingTemp:'Temperatura',settingMaxTokens:'Max token',settingDelay:'Ritardo (ms)',settingContext:'Contesto (caratteri)',settingThinking:'Thinking (ragionamento esteso)',settingThinkingHint:'Per modelli con thinking (QwQ, DeepSeek-R1, Qwen3).',settingThinkingBudget:'Thinking budget (token)',settingLanguage:'Lingua',settingCancel:'Annulla',settingSave:'Salva',placeholder:'# Titolo del documento\n\nInizia a scrivere in Markdown...',rephrase:'Rifrasa',correct:'Correggi',diffTitleRephrase:'Rifrasa',diffTitleCorrect:'Correggi',diffCancel:'Annulla',diffAccept:'Accetta',alertNoErrors:'Nessun errore trovato.',alertSelectMd:'Seleziona un file Markdown (.md)',alertNothingToSave:'Niente da salvare.',alertNothingToExport:'Niente da esportare.',docFallback:'Documento',systemPromptDefault:'Sei un assistente di scrittura. Completa il testo fornito dall\'utente in modo naturale e coerente. Il testo usa la sintassi Markdown: rispetta e continua lo stile Markdown se presente. Rispondi SOLO con la continuazione del testo, senza ripetere quello che c\'è già. Scrivi nella stessa lingua del testo. Produci al massimo 1-2 frasi.',llmPrompt:'Continua questo testo Markdown (rispondi SOLO con la continuazione, nient\'altro):\n\n',rephrasePrompt:'Riscrivi il testo fornito in modo diverso, mantenendo lo stesso significato e la stessa lingua. Se il testo usa sintassi Markdown, mantienila. Rispondi SOLO con il testo riscritto, nient\'altro.',correctPrompt:'Sei un correttore esperto. Correggi tutti gli errori ortografici, grammaticali, di punteggiatura, concordanza e sintassi nel testo fornito. Migliora la fluidità dove necessario, ma mantieni il significato e lo stile originale. Se il testo usa sintassi Markdown, mantienila. Rispondi SOLO con il testo corretto, senza spiegazioni.'},en:{brand:'Scriba',preview:'Preview',settings:'Settings',loadMd:'Load .md',saveMd:'Save .md',exportDocx:'Export .docx',hintTab:'accept',hintEsc:'reject',hintCtrlSpace:'suggest',hintCtrlP:'preview',wordSingular:'word',wordPlural:'words',disconnected:'disconnected',connected:'connected',thinkBadge:'think',settingsTitle:'Settings',settingServer:'LM Studio server address',settingSystemPrompt:'System prompt',settingTemp:'Temperature',settingMaxTokens:'Max tokens',settingDelay:'Delay (ms)',settingContext:'Context (chars)',settingThinking:'Thinking (extended reasoning)',settingThinkingHint:'For thinking models (QwQ, DeepSeek-R1, Qwen3).',settingThinkingBudget:'Thinking budget (tokens)',settingLanguage:'Language',settingCancel:'Cancel',settingSave:'Save',placeholder:'# Document title\n\nStart writing in Markdown...',rephrase:'Rephrase',correct:'Correct',diffTitleRephrase:'Rephrase',diffTitleCorrect:'Correct',diffCancel:'Cancel',diffAccept:'Accept',alertNoErrors:'No errors found.',alertSelectMd:'Select a Markdown file (.md)',alertNothingToSave:'Nothing to save.',alertNothingToExport:'Nothing to export.',docFallback:'Document',systemPromptDefault:'You are a writing assistant. Complete the user\'s text naturally and coherently. The text uses Markdown syntax: respect and continue the Markdown style if present. Answer ONLY with the continuation of the text, without repeating what is already there. Write in the same language as the text. Produce at most 1-2 sentences.',llmPrompt:'Continue this Markdown text (answer ONLY with the continuation, nothing else):\n\n',rephrasePrompt:'Rewrite the provided text differently, keeping the same meaning and language. If the text uses Markdown syntax, keep it. Answer ONLY with the rewritten text, nothing else.',correctPrompt:'You are an expert proofreader. Correct all spelling, grammar, punctuation, agreement and syntax errors in the provided text. Improve fluency where necessary, but maintain the original meaning and style. If the text uses Markdown syntax, keep it. Answer ONLY with the corrected text, no explanations.'}};
+let config={url:'http://localhost:1234',systemPrompt:'',temperature:0.7,maxTokens:80,delay:1500,contextChars:1500,thinking:false,thinkingBudget:1024,lang:'it'};
 let ghostText='',debounceTimer=null,abortController=null,isConnected=false,previewMode=false,ghostCursorPos=0;
 const editor=document.getElementById('editor'),ghostLayer=document.getElementById('ghost-layer'),editorArea=document.getElementById('editorArea'),preview=document.getElementById('preview'),previewBtn=document.getElementById('previewBtn'),statusDot=document.getElementById('statusDot'),statusLabel=document.getElementById('statusLabel'),thinkingIndicator=document.getElementById('thinkingIndicator'),wordCountEl=document.getElementById('wordCount');
+function t(key){return i18n[config.lang]?.[key]||i18n.it[key]||key;}
 
-function init(){loadSettings();checkConnection();setInterval(checkConnection,15000);editor.addEventListener('input',onInput);editor.addEventListener('keydown',onKeyDown);editor.addEventListener('scroll',syncGhostScroll);editor.addEventListener('click',()=>{clearGhost();cancelPending();});window.addEventListener('resize',autoResize);document.addEventListener('keydown',function(e){if(e.ctrlKey&&e.key==='p'){e.preventDefault();togglePreview();}});autoResize();}
+function init(){loadSettings();updateUI();checkConnection();setInterval(checkConnection,15000);editor.addEventListener('input',onInput);editor.addEventListener('keydown',onKeyDown);editor.addEventListener('scroll',syncGhostScroll);editor.addEventListener('click',()=>{clearGhost();cancelPending();});window.addEventListener('resize',autoResize);document.addEventListener('keydown',function(e){if(e.ctrlKey&&e.key==='p'){e.preventDefault();togglePreview();}});document.getElementById('settingLang').addEventListener('change',onLangChange);autoResize();}
+function updateUI(){document.getElementById('brandLabel').textContent=t('brand');document.getElementById('previewBtn').textContent=t('preview');document.getElementById('settingsBtn').textContent=t('settings');document.getElementById('loadMdBtn').textContent=t('loadMd');document.getElementById('saveMdBtn').textContent=t('saveMd');document.getElementById('exportDocxBtn').textContent=t('exportDocx');document.getElementById('hintsLabel').innerHTML='<kbd>Tab</kbd> '+t('hintTab')+' &nbsp;<kbd>Esc</kbd> '+t('hintEsc')+' &nbsp;<kbd>Ctrl</kbd>+<kbd>Spazio</kbd> '+t('hintCtrlSpace')+' &nbsp;<kbd>Ctrl</kbd>+<kbd>P</kbd> '+t('hintCtrlP');document.getElementById('thinkingBadge').textContent=t('thinkBadge');document.getElementById('settingsTitleLabel').textContent=t('settingsTitle');document.getElementById('settingLangLabel').textContent=t('settingLanguage');document.getElementById('settingServerLabel').textContent=t('settingServer');document.getElementById('settingSystemPromptLabel').textContent=t('settingSystemPrompt');document.getElementById('settingTempLabel').textContent=t('settingTemp');document.getElementById('settingMaxTokensLabel').textContent=t('settingMaxTokens');document.getElementById('settingDelayLabel').textContent=t('settingDelay');document.getElementById('settingContextLabel').textContent=t('settingContext');document.getElementById('settingThinkingLabel').textContent=t('settingThinking');document.getElementById('settingThinkingHintLabel').textContent=t('settingThinkingHint');document.getElementById('settingThinkingBudgetLabel').textContent=t('settingThinkingBudget');document.getElementById('settingCancelBtn').textContent=t('settingCancel');document.getElementById('settingSaveBtn').textContent=t('settingSave');document.getElementById('rephraseBtn').textContent=t('rephrase');document.getElementById('correctBtn').textContent=t('correct');document.getElementById('diffRejectBtn').textContent=t('diffCancel');document.getElementById('diffAcceptBtn').textContent=t('diffAccept');editor.placeholder=t('placeholder');statusLabel.textContent=isConnected?t('connected'):t('disconnected');updateWordCount();}
+function onLangChange(){const newLang=document.getElementById('settingLang').value;if(newLang!==config.lang){config.lang=newLang;if(!config.systemPrompt||config.systemPrompt===i18n.it.systemPromptDefault||config.systemPrompt===i18n.en.systemPromptDefault){config.systemPrompt=t('systemPromptDefault');document.getElementById('settingSystemPrompt').value=config.systemPrompt;}updateUI();}}
 
-function loadSettings(){const saved=localStorage.getItem('scriba-config');if(saved){try{Object.assign(config,JSON.parse(saved));}catch(e){}}document.getElementById('settingUrl').value=config.url;document.getElementById('settingSystemPrompt').value=config.systemPrompt||document.getElementById('settingSystemPrompt').value;document.getElementById('settingTemp').value=config.temperature;document.getElementById('settingMaxTokens').value=config.maxTokens;document.getElementById('settingDelay').value=config.delay;document.getElementById('settingContext').value=config.contextChars;document.getElementById('settingThinking').checked=config.thinking;document.getElementById('settingThinkingBudget').value=config.thinkingBudget;updateThinkingBudgetVisibility();config.systemPrompt=document.getElementById('settingSystemPrompt').value;document.getElementById('thinkingBadge').style.display=config.thinking?'inline':'none';document.getElementById('settingThinking').addEventListener('change',updateThinkingBudgetVisibility);}
+function loadSettings(){const saved=localStorage.getItem('scriba-config');if(saved){try{Object.assign(config,JSON.parse(saved));}catch(e){}}document.getElementById('settingLang').value=config.lang||'it';document.getElementById('settingUrl').value=config.url;document.getElementById('settingSystemPrompt').value=config.systemPrompt||t('systemPromptDefault');document.getElementById('settingTemp').value=config.temperature;document.getElementById('settingMaxTokens').value=config.maxTokens;document.getElementById('settingDelay').value=config.delay;document.getElementById('settingContext').value=config.contextChars;document.getElementById('settingThinking').checked=config.thinking;document.getElementById('settingThinkingBudget').value=config.thinkingBudget;updateThinkingBudgetVisibility();config.systemPrompt=config.systemPrompt||t('systemPromptDefault');document.getElementById('thinkingBadge').style.display=config.thinking?'inline':'none';document.getElementById('settingThinking').addEventListener('change',updateThinkingBudgetVisibility);}
 function updateThinkingBudgetVisibility(){document.getElementById('thinkingBudgetRow').style.display=document.getElementById('settingThinking').checked?'block':'none';}
-function saveSettings(){config.url=document.getElementById('settingUrl').value.replace(/\/+$/,'');config.systemPrompt=document.getElementById('settingSystemPrompt').value;config.temperature=parseFloat(document.getElementById('settingTemp').value);config.maxTokens=parseInt(document.getElementById('settingMaxTokens').value);config.delay=parseInt(document.getElementById('settingDelay').value);config.contextChars=parseInt(document.getElementById('settingContext').value);config.thinking=document.getElementById('settingThinking').checked;config.thinkingBudget=parseInt(document.getElementById('settingThinkingBudget').value);localStorage.setItem('scriba-config',JSON.stringify(config));document.getElementById('thinkingBadge').style.display=config.thinking?'inline':'none';closeSettings();checkConnection();}
+function saveSettings(){config.lang=document.getElementById('settingLang').value;config.url=document.getElementById('settingUrl').value.replace(/\/+$/,'');config.systemPrompt=document.getElementById('settingSystemPrompt').value;config.temperature=parseFloat(document.getElementById('settingTemp').value);config.maxTokens=parseInt(document.getElementById('settingMaxTokens').value);config.delay=parseInt(document.getElementById('settingDelay').value);config.contextChars=parseInt(document.getElementById('settingContext').value);config.thinking=document.getElementById('settingThinking').checked;config.thinkingBudget=parseInt(document.getElementById('settingThinkingBudget').value);localStorage.setItem('scriba-config',JSON.stringify(config));document.getElementById('thinkingBadge').style.display=config.thinking?'inline':'none';updateUI();closeSettings();checkConnection();}
 function openSettings(){document.getElementById('settingsOverlay').classList.add('open');}
 function closeSettings(){document.getElementById('settingsOverlay').classList.remove('open');}
 
 function togglePreview(){previewMode=!previewMode;if(previewMode){let text=editor.value;const mathStore=[];text=text.replace(/\$\$([\s\S]+?)\$\$/g,(match,math)=>{const id=mathStore.length;mathStore.push({type:'block',content:math.trim()});return '\n\n<!--MATHBLOCK'+id+'-->\n\n';});text=text.replace(/\$([^\$\n]+?)\$/g,(match,math)=>{const id=mathStore.length;mathStore.push({type:'inline',content:math});return '<!--MATHINLINE'+id+'-->';});let html=marked.parse(text);mathStore.forEach((item,idx)=>{const placeholder=item.type==='block'?'<!--MATHBLOCK'+idx+'-->':'<!--MATHINLINE'+idx+'-->';try{const rendered=katex.renderToString(item.content,{throwOnError:false,displayMode:item.type==='block'});const wrapped=item.type==='block'?'<div class="math-block">'+rendered+'</div>':rendered;html=html.split(placeholder).join(wrapped);}catch(e){console.error('KaTeX error:',e,item.content);}});preview.innerHTML=html;editorArea.style.display='none';preview.style.display='block';previewBtn.classList.add('active');}else{editorArea.style.display='block';preview.style.display='none';previewBtn.classList.remove('active');editor.focus();autoResize();}}
 
-async function checkConnection(){try{const r=await fetch(config.url+'/v1/models',{signal:AbortSignal.timeout(3000)});if(r.ok){isConnected=true;statusDot.classList.add('connected');const data=await r.json();statusLabel.textContent=data?.data?.[0]?.id||'connesso';}else{throw new Error();}}catch{isConnected=false;statusDot.classList.remove('connected');statusLabel.textContent='disconnesso';}}
+async function checkConnection(){try{const r=await fetch(config.url+'/v1/models',{signal:AbortSignal.timeout(3000)});if(r.ok){isConnected=true;statusDot.classList.add('connected');const data=await r.json();statusLabel.textContent=data?.data?.[0]?.id||t('connected');}else{throw new Error();}}catch{isConnected=false;statusDot.classList.remove('connected');statusLabel.textContent=t('disconnected');}}
 
 function onInput(){autoResize();updateWordCount();clearGhost();cancelPending();const text=editor.value;if(!text.trim()||!isConnected)return;const endsWithPunctOrSpace=/[.!?,;:\s\n]$/.test(text.slice(-3));debounceTimer=setTimeout(()=>{requestCompletion();},endsWithPunctOrSpace?config.delay:config.delay*1.5);}
 function onKeyDown(e){if(e.key==='Tab'&&ghostText){e.preventDefault();acceptGhost();return;}if(e.key==='Escape'&&ghostText){e.preventDefault();clearGhost();cancelPending();return;}if((e.key===' '||e.code==='Space')&&e.ctrlKey){e.preventDefault();cancelPending();requestCompletion();return;}if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End','PageUp','PageDown'].includes(e.key)){clearGhost();cancelPending();}}
 function autoResize(){editor.style.height='auto';editor.style.height=editor.scrollHeight+'px';}
-function updateWordCount(){const text=editor.value.trim();const count=text?text.split(/\s+/).length:0;wordCountEl.textContent=count+' parol'+(count===1?'a':'e');}
+function updateWordCount(){const text=editor.value.trim();const count=text?text.split(/\s+/).length:0;wordCountEl.textContent=count+' '+(count===1?t('wordSingular'):t('wordPlural'));}
 
 function showGhost(suggestion,cursorPos){ghostText=suggestion;const before=editor.value.substring(0,cursorPos);const after=editor.value.substring(cursorPos);ghostLayer.innerHTML='<span class="real-text">'+escapeHtml(before)+'</span><span class="ghost-text">'+escapeHtml(suggestion)+'</span><span class="real-text">'+escapeHtml(after)+'</span>';syncGhostPosition();}
 function clearGhost(){ghostText='';ghostLayer.innerHTML='';ghostCursorPos=0;}
@@ -284,7 +293,7 @@ function acceptGhost(){if(!ghostText)return;const before=editor.value.substring(
 function syncGhostPosition(){const s=getComputedStyle(editor);ghostLayer.style.padding=s.padding;ghostLayer.style.width=s.width;ghostLayer.style.top=editor.offsetTop+'px';ghostLayer.style.left=editor.offsetLeft+'px';}
 function syncGhostScroll(){ghostLayer.scrollTop=editor.scrollTop;}
 
-async function requestCompletion(){if(!isConnected)return;const cursorPos=editor.selectionStart;const fullText=editor.value;const textBeforeCursor=fullText.substring(0,cursorPos);if(!textBeforeCursor.trim())return;const context=textBeforeCursor.slice(-config.contextChars);cancelPending();abortController=new AbortController();ghostCursorPos=cursorPos;thinkingIndicator.innerHTML='<span class="thinking"></span>';try{const body={model:'local-model',max_tokens:config.thinking?config.maxTokens+config.thinkingBudget:config.maxTokens,temperature:config.temperature,stop:['\n\n\n'],messages:[{role:'system',content:config.systemPrompt+(config.thinking?'':'\n\nNon usare tag <think> né processi di ragionamento visibili. Rispondi direttamente con il testo.')},{role:'user',content:'Continua questo testo Markdown (rispondi SOLO con la continuazione, nient\'altro):\n\n'+context}]};const response=await fetch(config.url+'/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json'},signal:abortController.signal,body:JSON.stringify(body)});if(!response.ok){const errText=await response.text();console.error('LLM request failed:',response.status,errText);throw new Error('HTTP '+response.status);}const data=await response.json();const suggestion=data?.choices?.[0]?.message?.content;if(suggestion&&suggestion.trim()){if(editor.selectionStart===cursorPos){const stripped=stripThinkTags(suggestion);const cleaned=cleanSuggestion(textBeforeCursor,stripped);if(cleaned.trim())showGhost(cleaned,cursorPos);}}}catch(e){if(e.name!=='AbortError')console.error('LLM error:',e);}finally{thinkingIndicator.innerHTML='';}}
+async function requestCompletion(){if(!isConnected)return;const cursorPos=editor.selectionStart;const fullText=editor.value;const textBeforeCursor=fullText.substring(0,cursorPos);if(!textBeforeCursor.trim())return;const context=textBeforeCursor.slice(-config.contextChars);cancelPending();abortController=new AbortController();ghostCursorPos=cursorPos;thinkingIndicator.innerHTML='<span class="thinking"></span>';try{const noThinkMsg=config.lang==='it'?'\n\nNon usare tag <think> né processi di ragionamento visibili. Rispondi direttamente con il testo.':'\n\nDo not use <think> tags or visible reasoning processes. Answer directly with the text.';const body={model:'local-model',max_tokens:config.thinking?config.maxTokens+config.thinkingBudget:config.maxTokens,temperature:config.temperature,stop:['\n\n\n'],messages:[{role:'system',content:config.systemPrompt+(config.thinking?'':noThinkMsg)},{role:'user',content:t('llmPrompt')+context}]};const response=await fetch(config.url+'/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json'},signal:abortController.signal,body:JSON.stringify(body)});if(!response.ok){const errText=await response.text();console.error('LLM request failed:',response.status,errText);throw new Error('HTTP '+response.status);}const data=await response.json();const suggestion=data?.choices?.[0]?.message?.content;if(suggestion&&suggestion.trim()){if(editor.selectionStart===cursorPos){const stripped=stripThinkTags(suggestion);const cleaned=cleanSuggestion(textBeforeCursor,stripped);if(cleaned.trim())showGhost(cleaned,cursorPos);}}}catch(e){if(e.name!=='AbortError')console.error('LLM error:',e);}finally{thinkingIndicator.innerHTML='';}}
 function cancelPending(){if(debounceTimer){clearTimeout(debounceTimer);debounceTimer=null;}if(abortController){abortController.abort();abortController=null;}thinkingIndicator.innerHTML='';}
 function stripThinkTags(t){return t.replace(/<think>[\s\S]*?<\/think>/gi,'').replace(/<think>[\s\S]*/gi,'').trim();}
 function cleanSuggestion(existing,suggestion){let s=suggestion;const tail=existing.slice(-100);for(let len=Math.min(tail.length,s.length);len>5;len--){if(s.substring(0,len)===tail.slice(-len)){s=s.substring(len);break;}}if(existing.length>0&&!/\s$/.test(existing)&&/^[a-zA-ZÀ-ÿ]/.test(s))s=' '+s;return s;}
@@ -307,17 +316,16 @@ const ol=line.match(/^(\s*)(\d+)[.)]\s+(.+)$/);if(ol){const ind=720+Math.floor((
 xml+='<w:p><w:pPr><w:spacing w:after="120" w:line="360" w:lineRule="auto"/></w:pPr>'+inlineToRuns(line)+'</w:p>';}
 return xml;}
 
-function loadMd(){const fileInput=document.getElementById('fileInput');fileInput.onchange=function(e){const file=e.target.files[0];if(!file)return;if(!file.name.match(/\.(md|markdown)$/i)){alert('Seleziona un file Markdown (.md)');return;}const reader=new FileReader();reader.onload=function(ev){editor.value=ev.target.result;autoResize();updateWordCount();clearGhost();cancelPending();};reader.readAsText(file,'UTF-8');fileInput.value='';};fileInput.click();}
+function loadMd(){const fileInput=document.getElementById('fileInput');fileInput.onchange=function(e){const file=e.target.files[0];if(!file)return;if(!file.name.match(/\.(md|markdown)$/i)){alert(t('alertSelectMd'));return;}const reader=new FileReader();reader.onload=function(ev){editor.value=ev.target.result;autoResize();updateWordCount();clearGhost();cancelPending();};reader.readAsText(file,'UTF-8');fileInput.value='';};fileInput.click();}
 
-function saveMd(){const bodyText=editor.value;if(!bodyText.trim()){alert('Niente da salvare.');return;}
-const titleMatch=bodyText.match(/^#\s+(.+)$/m);const titleText=titleMatch?titleMatch[1].trim():'Documento';
+function saveMd(){const bodyText=editor.value;if(!bodyText.trim()){alert(t('alertNothingToSave'));return;}
+const titleMatch=bodyText.match(/^#\s+(.+)$/m);const titleText=titleMatch?titleMatch[1].trim():t('docFallback');
 const fn=titleText.replace(/[^a-zA-Z0-9\u00C0-\u024F\s]/g,'').replace(/\s+/g,'_').substring(0,40);
 const blob=new Blob([bodyText],{type:'text/markdown;charset=utf-8'});
 saveAs(blob,fn+'.md');}
 
-async function exportDocx(){const bodyText=editor.value;if(!bodyText.trim()){alert('Niente da esportare.');return;}
-// Extract title from first # heading, fallback to 'Documento'
-const titleMatch=bodyText.match(/^#\s+(.+)$/m);const titleText=titleMatch?titleMatch[1].trim():'Documento';
+async function exportDocx(){const bodyText=editor.value;if(!bodyText.trim()){alert(t('alertNothingToExport'));return;}
+const titleMatch=bodyText.match(/^#\s+(.+)$/m);const titleText=titleMatch?titleMatch[1].trim():t('docFallback');
 const bodyXml=markdownToDocxXml(bodyText);
 const docXml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" xmlns:mo="http://schemas.microsoft.com/office/mac/office/2008/main" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:mv="urn:schemas-microsoft-com:mac:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:w10="urn:schemas-microsoft-com:office:word" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:wne="http://schemas.microsoft.com/office/word/2006/wordml"><w:body>'+bodyXml+'<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr></w:body></w:document>';
 const ct='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>';
@@ -370,9 +378,8 @@ async function ctxAction(mode){
   abortController=new AbortController();
   thinkingIndicator.innerHTML='<span class="thinking"></span>';
 
-  const sysMsg=mode==='rephrase'
-    ? 'Riscrivi il testo fornito in modo diverso, mantenendo lo stesso significato e la stessa lingua. Se il testo usa sintassi Markdown, mantienila. Rispondi SOLO con il testo riscritto, nient\'altro.'
-    : 'Sei un correttore esperto. Correggi tutti gli errori ortografici, grammaticali, di punteggiatura, concordanza e sintassi nel testo fornito. Migliora la fluidità dove necessario, ma mantieni il significato e lo stile originale. Se il testo usa sintassi Markdown, mantienila. Rispondi SOLO con il testo corretto, senza spiegazioni.';
+  const sysMsg=mode==='rephrase'?t('rephrasePrompt'):t('correctPrompt');
+  const noThinkMsg=config.lang==='it'?'\n\nNon usare tag <think>. Rispondi direttamente.':'\n\nDo not use <think> tags. Answer directly.';
 
   try{
     const body={
@@ -380,7 +387,7 @@ async function ctxAction(mode){
       max_tokens:Math.max(512,Math.ceil(selText.length*1.2)),
       temperature:mode==='rephrase'?0.8:0.2,
       messages:[
-        {role:'system',content:sysMsg+(config.thinking?'':'\n\nNon usare tag <think>. Rispondi direttamente.')},
+        {role:'system',content:sysMsg+(config.thinking?'':noThinkMsg)},
         {role:'user',content:selText}
       ]
     };
@@ -396,12 +403,12 @@ async function ctxAction(mode){
       result=stripThinkTags(result).trim();
       if(result&&result!==selText.trim()){
         pendingReplacement=result;
-        document.getElementById('diffTitle').textContent=mode==='rephrase'?'Rifrasa':'Correggi';
+        document.getElementById('diffTitle').textContent=mode==='rephrase'?t('diffTitleRephrase'):t('diffTitleCorrect');
         document.getElementById('diffOld').textContent=selText;
         document.getElementById('diffNew').textContent=result;
         document.getElementById('diffOverlay').classList.add('open');
       }else if(result===selText.trim()&&mode==='correct'){
-        alert('Nessun errore trovato.');
+        alert(t('alertNoErrors'));
       }
     }
   }catch(e){

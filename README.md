@@ -1,5 +1,7 @@
 # Scriba
 
+> **[English version available here](README.en.md)** 🇬🇧
+
 Editor di scrittura minimale con autocompletamento LLM locale, supporto Markdown e export .docx.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
@@ -30,13 +32,16 @@ Scarica e installa [LM Studio](https://lmstudio.ai/) per il tuo sistema operativ
 
 Apri LM Studio e scarica uno dei modelli consigliati (vedi sezione "Modelli LLM consigliati").
 
-### 3. Avvia il server locale
+### 3. Configura e avvia il server locale
 
 In LM Studio:
 1. Vai su **Local Server** (icona ↗️)
 2. Carica il modello desiderato
-3. Clicca su **Start Server**
-4. Assicurati che sia in ascolto su `localhost:1234`
+3. **IMPORTANTE**: Apri **Server Settings** (⚙️ in alto a destra) e abilita **CORS**
+4. Clicca su **Start Server**
+5. Assicurati che sia in ascolto su `localhost:1234`
+
+⚠️ **Senza CORS abilitato, Scriba non potrà comunicare con LM Studio dal browser!**
 
 ### 4. Apri Scriba
 
@@ -190,8 +195,9 @@ Elementi supportati:
 
 - Verifica che LM Studio sia avviato
 - Controlla che il server locale sia attivo su `localhost:1234`
+- **Assicurati che CORS sia abilitato in LM Studio** (Server Settings → Enable CORS)
 - Vai in Impostazioni e verifica l'URL del server
-- Controlla la console JavaScript (F12) per errori
+- Controlla la console JavaScript (F12) per errori CORS
 
 ### I suggerimenti sono troppo lenti
 
