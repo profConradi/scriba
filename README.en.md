@@ -259,7 +259,7 @@ All libraries are loaded from CDN for simplicity:
 
 ## 📄 License
 
-MIT License - Copyright (c) 2025
+MIT License - Copyright (c) 2026
 
 ## 🤝 Contributing
 

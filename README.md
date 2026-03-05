@@ -257,7 +257,7 @@ Tutte le librerie sono caricate da CDN per semplicità:
 
 ## 📄 Licenza
 
-MIT License - Copyright (c) 2025
+MIT License - Copyright (c) 2026
 
 ## 🤝 Contributi
 
